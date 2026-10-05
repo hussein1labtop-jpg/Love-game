@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4c1d95">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>حجر ورق مقص أونلاين</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;font-family:system-ui,-apple-system,"Segoe UI",Tahoma,sans-serif;color:#fff;background:linear-gradient(160deg,#4c1d95,#be185d);background-attachment:fixed}
+body{padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);display:flex;justify-content:center}
+#app{width:100%;max-width:440px;padding:18px 0 30px}
+h1{text-align:center;font-size:28px;margin:6px 0 4px}
+.sub{text-align:center;opacity:.85;margin-bottom:16px;font-size:14px}
+.card{background:rgba(255,255,255,.14);backdrop-filter:blur(8px);border-radius:20px;padding:18px;margin-bottom:14px}
+label{display:block;font-size:13px;opacity:.9;margin:10px 0 4px}
+input{width:100%;padding:12px;border-radius:12px;border:0;font-size:16px;font-family:inherit;background:#fff;color:#222}
+.btn{display:block;width:100%;padding:14px;border:0;border-radius:14px;font-size:18px;font-weight:700;font-family:inherit;color:#fff;background:#10b981;margin-top:12px;cursor:pointer}
+.btn:disabled{opacity:.4}
+.btn.alt{background:rgba(255,255,255,.22)}
+.btn.wa{background:#25d366}
+.btn:active{transform:scale(.98)}
+.hidden{display:none!important}
+.sep{text-align:center;opacity:.7;margin:14px 0 2px;font-size:14px}
+.turn{text-align:center;font-size:22px;font-weight:700;margin-bottom:4px}
+.hint{text-align:center;opacity:.85;font-size:14px;margin-bottom:14px;min-height:20px}
+.choices{display:flex;gap:10px}
+.choice{flex:1;aspect-ratio:1;border-radius:18px;border:3px solid transparent;background:rgba(255,255,255,.18);font-size:52px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:inherit}
+.choice span{font-size:14px;margin-top:4px}
+.choice.sel{border-color:#fde047;background:rgba(253,224,71,.3);transform:scale(1.05)}
+.choice:disabled{opacity:.6}
+.count{font-size:120px;text-align:center;font-weight:800;margin:30px 0;animation:pop .6s}
+@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
+.reveal{display:flex;justify-content:space-around;text-align:center;margin:10px 0}
+.reveal div{font-size:70px}
+.reveal small{display:block;font-size:15px;margin-top:4px}
+.res{text-align:center;font-size:26px;font-weight:800;margin:10px 0}
+.score{display:flex;justify-content:space-around;text-align:center;font-size:15px}
+.score b{display:block;font-size:30px}
+.top{display:flex;justify-content:flex-end}
+.mute{background:none;border:0;font-size:24px;color:#fff;cursor:pointer}
+.code{font-size:56px;font-weight:800;letter-spacing:10px;text-align:center;direction:ltr;margin:6px 0}
+.status{text-align:center;font-size:14px;opacity:.9;margin-top:8px;min-height:18px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111c;padding:12px 18px;border-radius:14px;font-size:15px;max-width:90%;text-align:center;z-index:9}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top"><button class="mute" id="mute" aria-label="صوت">🔊</button></div>
+  <h1>✊ ✋ ✌️</h1>
+  <div class="sub">حجر ورق مقص — أونلاين، كل واحد ببيته</div>
+
+  <!-- القائمة -->
+  <div id="s-menu">
+    <div class="card">
+      <label>اسمك</label>
+      <input id="name" placeholder="مثلاً: حسين" maxlength="20">
+      <label>رقم واتساب الطرف الثاني (اختياري — حتى يوصلك الواتساب مباشرة إذا خسرت)</label>
+      <input id="phone" type="tel" inputmode="tel" placeholder="07xxxxxxxxx" dir="ltr">
+    </div>
+    <button class="btn" id="create">🏠 سوّي غرفة</button>
+    <div class="sep">— أو —</div>
+    <div class="card">
+      <label>كود الغرفة</label>
+      <input id="code" type="tel" inputmode="numeric" maxlength="4" placeholder="1234" dir="ltr" style="text-align:center;font-size:22px;letter-spacing:6px">
+      <button class="btn alt" id="join">🚪 ادخل الغرفة</button>
+    </div>
+    <button class="btn alt hidden" id="install">📲 ثبّت اللعبة كتطبيق</button>
+  </div>
+
+  <!-- الانتظار -->
+  <div id="s-lobby" class="hidden">
+    <div class="card">
+      <div class="turn">كود غرفتك</div>
+      <div class="code" id="roomcode">----</div>
+      <div class="status" id="lobbystatus">جاري تجهيز الغرفة...</div>
+      <button class="btn wa" id="share" disabled>📤 ابعث الدعوة بالواتساب</button>
+      <button class="btn alt" id="copy" disabled>📋 انسخ الرابط</button>
+      <button class="btn alt" id="cancel">إلغاء</button>
+    </div>
+  </div>
+
+  <!-- الاختيار -->
+  <div id="s-pick" class="hidden">
+    <div class="card">
+      <div class="turn" id="turn"></div>
+      <div class="hint" id="hint"></div>
+      <div class="choices">
+        <button class="choice" data-c="0">✊<span>حجر</span></button>
+        <button class="choice" data-c="1">✋<span>ورق</span></button>
+        <button class="choice" data-c="2">✌️<span>مقص</span></button>
+      </div>
+      <button class="btn" id="ready" disabled>أني جاهز ✅</button>
+      <div class="status" id="oppstatus"></div>
+    </div>
+  </div>
+
+  <!-- العد -->
+  <div id="s-count" class="hidden"><div class="count" id="count">3</div></div>
+
+  <!-- النتيجة -->
+  <div id="s-result" class="hidden">
+    <div class="card">
+      <div class="reveal">
+        <div><span id="e1"></span><small id="r1"></small></div>
+        <div><span id="e2"></span><small id="r2"></small></div>
+      </div>
+      <div class="res" id="res"></div>
+      <button class="btn wa hidden" id="wa">💬 افتح موضوع بالواتساب</button>
+      <div class="status hidden" id="waitloser"></div>
+      <button class="btn" id="again">جولة ثانية 🔁</button>
+      <button class="btn alt" id="leave">طلوع من الغرفة</button>
+    </div>
+    <div class="card score">
+      <div><span id="sn1"></span><b id="sc1">0</b></div>
+      <div><span>تعادل</span><b id="sc0">0</b></div>
+      <div><span id="sn2"></span><b id="sc2">0</b></div>
+    </div>
+  </div>
+</div>
+<div id="toast" class="hidden"></div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+const E=["✊","✋","✌️"], N=["حجر","ورق","مقص"];
+const PREFIX="rpsfz-";
+const $=id=>document.getElementById(id);
+const ICE={config:{iceServers:[
+  {urls:"stun:stun.l.google.com:19302"},
+  {urls:"stun:global.stun.twilio.com:3478"},
+  {urls:"turn:openrelay.metered.ca:80",username:"openrelayproject",credential:"openrelayproject"},
+  {urls:"turn:openrelay.metered.ca:443",username:"openrelayproject",credential:"openrelayproject"}
+]}};
+
+let peer=null, conn=null, isHost=false, roomCode="";
+let myName="", oppName="", oppPhone="";
+let phase="menu", myPick=null, oppPick=null, iReady=false, gotHello=false;
+let score={me:0,opp:0,draw:0}, loserIsMe=false;
+
+/* ---------- صوت ---------- */
+let actx=null, muted=localStorage.getItem("rps_mute")==="1";
+$("mute").textContent=muted?"🔇":"🔊";
+function ac(){ if(!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}} if(actx&&actx.state==="suspended")actx.resume(); return actx; }
+function tone(f,t0,d,type="sine",v=.25){
+  if(muted)return; const c=ac(); if(!c)return;
+  const o=c.createOscillator(), g=c.createGain();
+  o.type=type; o.frequency.value=f; o.connect(g); g.connect(c.destination);
+  const t=c.currentTime+t0;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.01); g.gain.exponentialRampToValueAtTime(.001,t+d);
+  o.start(t); o.stop(t+d+.05);
+}
+const snd={
+  click:()=>tone(660,0,.08,"triangle"),
+  pick:()=>tone(520,0,.1,"square",.15),
+  ready:()=>{tone(523,0,.1);tone(784,.1,.15)},
+  join:()=>{tone(523,0,.12);tone(659,.12,.12);tone(784,.24,.2)},
+  beep:()=>tone(440,0,.2,"square",.2),
+  go:()=>tone(880,0,.4,"square",.25),
+  win:()=>[523,659,784,1047].forEach((f,i)=>tone(f,i*.13,.25,"triangle",.3)),
+  lose:()=>[392,330,262,196].forEach((f,i)=>tone(f,i*.18,.3,"sawtooth",.18)),
+  draw:()=>{tone(440,0,.2);tone(440,.25,.2)}
+};
+$("mute").onclick=()=>{muted=!muted;localStorage.setItem("rps_mute",muted?"1":"0");$("mute").textContent=muted?"🔇":"🔊";if(!muted){ac();snd.click()}};
+
+/* ---------- واجهة ---------- */
+function show(id){["menu","lobby","pick","count","result"].forEach(s=>$("s-"+s).classList.toggle("hidden",s!==id)); phase=id;}
+let tt; function toast(m,ms=3500){const t=$("toast");t.textContent=m;t.classList.remove("hidden");clearTimeout(tt);tt=setTimeout(()=>t.classList.add("hidden"),ms)}
+
+$("name").value=localStorage.getItem("rps_name")||"";
+$("phone").value=localStorage.getItem("rps_phone")||"";
+const urlRoom=new URLSearchParams(location.search).get("room");
+if(urlRoom) $("code").value=urlRoom.replace(/\D/g,"").slice(0,4);
+
+function readProfile(){
+  myName=$("name").value.trim()||"لاعب";
+  oppPhone=$("phone").value.trim();
+  localStorage.setItem("rps_name",$("name").value.trim());
+  localStorage.setItem("rps_phone",oppPhone);
+}
+
+/* ---------- الاتصال ---------- */
+function cleanup(){
+  try{conn&&conn.close()}catch(e){}
+  try{peer&&peer.destroy()}catch(e){}
+  conn=null; peer=null; gotHello=false;
+}
+function backToMenu(msg){
+  cleanup(); show("menu"); if(msg)toast(msg);
+}
+function inviteUrl(){ return location.origin+location.pathname+"?room="+roomCode; }
+
+$("create").onclick=()=>{
+  ac(); snd.click(); readProfile(); isHost=true;
+  show("lobby"); $("share").disabled=true; $("copy").disabled=true;
+  $("lobbystatus").textContent="جاري تجهيز الغرفة...";
+  makeRoom();
+};
+function makeRoom(){
+  cleanup();
+  roomCode=String(Math.floor(1000+Math.random()*9000));
+  $("roomcode").textContent=roomCode;
+  peer=new Peer(PREFIX+roomCode,ICE);
+  peer.on("open",()=>{
+    $("lobbystatus").textContent="ننتظر الطرف الثاني يدخل... ⏳";
+    $("share").disabled=false; $("copy").disabled=false;
+  });
+  peer.on("connection",c=>{
+    if(conn&&conn.open){c.close();return;}
+    setupConn(c);
+  });
+  peer.on("error",e=>{
+    if(e.type==="unavailable-id"){ makeRoom(); return; }
+    if(phase==="lobby") backToMenu("صار خطأ بالاتصال: "+e.type);
+  });
+}
+$("share").onclick=()=>{
+  snd.click();
+  const msg="تعالي نلعب حجر ورق مقص 🎮\nكود الغرفة: "+roomCode+"\n"+inviteUrl();
+  const num=waNumber(oppPhone);
+  window.open((num?"https://wa.me/"+num:"https://wa.me/")+"?text="+encodeURIComponent(msg),"_blank");
+};
+$("copy").onclick=async()=>{
+  snd.click();
+  try{await navigator.clipboard.writeText(inviteUrl());toast("اننسخ الرابط ✅")}catch(e){toast(inviteUrl(),8000)}
+};
+$("cancel").onclick=()=>{snd.click();backToMenu()};
+
+$("join").onclick=()=>{
+  ac(); snd.click(); readProfile();
+  const code=$("code").value.replace(/\D/g,"");
+  if(code.length!==4){toast("اكتب كود الغرفة (4 أرقام)");return;}
+  isHost=false; roomCode=code;
+  show("lobby"); $("roomcode").textContent=code;
+  $("share").disabled=true; $("copy").disabled=true;
+  $("lobbystatus").textContent="جاري الدخول للغرفة...";
+  cleanup();
+  peer=new Peer(ICE);
+  let timer=setTimeout(()=>{ if(phase==="lobby") backToMenu("ما كدرت أدخل الغرفة، تأكد من الكود أو جرّب مرة ثانية"); },15000);
+  peer.on("open",()=>{
+    const c=peer.connect(PREFIX+code,{reliable:true});
+    setupConn(c);
+    c.on("open",()=>clearTimeout(timer));
+  });
+  peer.on("error",e=>{
+    clearTimeout(timer);
+    if(e.type==="peer-unavailable") backToMenu("الغرفة مو موجودة، تأكد من الكود");
+    else if(phase==="lobby") backToMenu("صار خطأ بالاتصال: "+e.type);
+  });
+};
+
+function setupConn(c){
+  conn=c;
+  c.on("open",()=>{ c.send({t:"hello",name:myName}); });
+  c.on("data",onData);
+  c.on("close",()=>{ if(phase!=="menu") backToMenu("انقطع الاتصال مع "+(oppName||"الطرف الثاني")+" 📴"); });
+  c.on("error",()=>{ if(phase!=="menu") backToMenu("صار خطأ بالاتصال"); });
+}
+function send(o){ try{conn&&conn.open&&conn.send(o)}catch(e){} }
+
+function onData(m){
+  if(!m||!m.t)return;
+  if(m.t==="hello"){
+    if(gotHello)return; gotHello=true;
+    oppName=(m.name||"لاعب").slice(0,20);
+    if(oppName===myName) oppName=oppName+" (2)";
+    snd.join(); startGame();
+  }
+  else if(m.t==="pick"){
+    oppPick=m.c; $("oppstatus").textContent=oppName+" جاهز ✅"; tryStart();
+  }
+  else if(m.t==="again"){
+    if(phase==="result") newRound();
+  }
+  else if(m.t==="wa"){
+    toast(oppName+" فتح الواتساب يريد يسولف وياك 💬",5000);
+  }
+}
+
+/* ---------- اللعبة ---------- */
+function startGame(){
+  score={me:0,opp:0,draw:0}; updScore(); newRound();
+}
+function newRound(){
+  myPick=null; oppPick=null; iReady=false;
+  $("turn").textContent="اختارك يا "+myName+" 🎯";
+  $("hint").textContent="اختار وبعدين اضغط جاهز";
+  $("oppstatus").textContent="";
+  document.querySelectorAll(".choice").forEach(b=>{b.classList.remove("sel");b.disabled=false});
+  $("ready").disabled=true; $("ready").textContent="أني جاهز ✅";
+  show("pick");
+}
+document.querySelectorAll(".choice").forEach(b=>b.onclick=()=>{
+  if(iReady)return;
+  snd.pick(); myPick=+b.dataset.c;
+  document.querySelectorAll(".choice").forEach(x=>x.classList.toggle("sel",x===b));
+  $("ready").disabled=false;
+});
+$("ready").onclick=()=>{
+  if(myPick===null||iReady)return;
+  snd.ready(); iReady=true;
+  send({t:"pick",c:myPick});
+  document.querySelectorAll(".choice").forEach(b=>b.disabled=true);
+  $("ready").disabled=true; $("ready").textContent="ننتظر "+oppName+"... ⏳";
+  tryStart();
+};
+function tryStart(){
+  if(phase==="pick"&&iReady&&myPick!==null&&oppPick!==null) countdown();
+}
+function countdown(){
+  show("count"); let n=3;
+  const tick=()=>{
+    const el=$("count"); el.textContent=n; el.style.animation="none"; void el.offsetWidth; el.style.animation="";
+    snd.beep();
+    if(n>1){n--;setTimeout(tick,900)} else setTimeout(showResult,900);
+  };
+  tick();
+}
+function showResult(){
+  if(myPick===null||oppPick===null){return}
+  snd.go();
+  $("e1").textContent=E[myPick]; $("e2").textContent=E[oppPick];
+  $("r1").textContent=myName+" ("+N[myPick]+")"; $("r2").textContent=oppName+" ("+N[oppPick]+")";
+  const d=(myPick-oppPick+3)%3;
+  const wa=$("wa"), wl=$("waitloser");
+  wa.classList.add("hidden"); wl.classList.add("hidden");
+  if(d===0){
+    score.draw++; $("res").textContent="تعادل 🤝 عيدوها!"; setTimeout(snd.draw,300);
+  } else if(d===1){
+    score.me++; $("res").textContent="🎉 "+myName+" فاز!";
+    wl.textContent="ننتظر "+oppName+" (الخسران) يفتح موضوع 😏"; wl.classList.remove("hidden");
+    setTimeout(snd.win,300);
+  } else {
+    score.opp++; $("res").textContent="🎉 "+oppName+" فاز!";
+    wa.classList.remove("hidden"); loserIsMe=true;
+    setTimeout(snd.lose,300);
+  }
+  updScore(); show("result");
+}
+function updScore(){
+  $("sn1").textContent=myName; $("sn2").textContent=oppName;
+  $("sc1").textContent=score.me; $("sc2").textContent=score.opp; $("sc0").textContent=score.draw;
+}
+$("again").onclick=()=>{snd.click(); send({t:"again"}); newRound();};
+$("leave").onclick=()=>{snd.click(); backToMenu();};
+
+/* ---------- واتساب ---------- */
+function waNumber(p){
+  let d=(p||"").replace(/\D/g,""); if(!d)return "";
+  if(d.startsWith("00"))d=d.slice(2);
+  else if(d.startsWith("0"))d="964"+d.slice(1);
+  return d;
+}
+$("wa").onclick=()=>{
+  snd.click(); send({t:"wa"});
+  const msg="أني خسرت 😅 وهسه أفتحلك موضوع نسولف بيه... ";
+  const num=waNumber(oppPhone);
+  window.open((num?"https://wa.me/"+num:"https://wa.me/")+"?text="+encodeURIComponent(msg),"_blank");
+};
+
+/* ---------- تثبيت التطبيق ---------- */
+let dp=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();dp=e;$("install").classList.remove("hidden")});
+$("install").onclick=async()=>{ if(!dp)return; dp.prompt(); await dp.userChoice; dp=null; $("install").classList.add("hidden"); };
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
